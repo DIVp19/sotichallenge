@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "sotichallenge": {
+    "second-project": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -31,12 +31,7 @@
             ],
             "styles": [
               "src/styles.scss"
-            ],
-            "server": "src/main.server.ts",
-            "outputMode": "server",
-            "ssr": {
-              "entry": "src/server.ts"
-            }
+            ]
           },
           "configurations": {
             "production": {
@@ -66,10 +61,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "sotichallenge:build:production"
+              "buildTarget": "second-project:build:production"
             },
             "development": {
-              "buildTarget": "sotichallenge:build:development"
+              "buildTarget": "second-project:build:development"
             }
           },
           "defaultConfiguration": "development"
