@@ -1,0 +1,49 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<div class="header">
+  <div class="hamburger-icon-container">
+    <button class="hamburger-icon" (click)="toggleMenu()">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="side-menu" [class.open]="isMenuOpen">
+    <div class="menu-content">
+      <button class="menu-button">
+        <i class="fas fa-bars"></i>
+        <span>Create a template</span>
+      </button>
+      <button class="menu-button" (click)="resetCanvas()">
+        <i class="fas fa-plus"></i>
+        <span>Generate a new widget</span>
+      </button>
+      <button class="menu-button">
+        <i class="fas fa-folder-plus"></i>
+        <span>New template</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="palette">
+    <h3>Available Widgets</h3>
+    <div cdkDropList #paletteList="cdkDropList" [cdkDropListData]="paletteWidgets" class="palette-list" [cdkDropListConnectedTo]="[canvasList]">
+      <div *ngFor="let widget of paletteWidgets" class="widget-item" [class.disabled]="widget.disabled" cdkDrag [cdkDragData]="widget" [cdkDragDisabled]="widget.disabled">
+        {{ widget.name }}
+      </div>
+    </div>
+  </div>
+
+  <div class="canvas-wrapper">
+    <div cdkDropList #canvasList="cdkDropList" [cdkDropListData]="canvasWidgets" (cdkDropListDropped)="drop($event)" class="canvas">
+      <div *ngFor="let widget of canvasWidgets" class="canvas-widget">
+        {{ widget.name }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer" *ngIf="canvasWidgets.length > 0">
+  <button (click)="saveTemplate()">Save Template</button>
+  <button (click)="resetCanvas()">Cancel Process</button>
+</div>
