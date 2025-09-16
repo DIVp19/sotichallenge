@@ -1,0 +1,62 @@
+<div class="admin-page">
+  <div class="toolbar no-print">
+    <h2>{{ template.name }}</h2>
+    <button class="print-btn" (click)="onPrint()">Print / Save as PDF</button>
+  </div>
+
+  <div class="label-canvas" [style.width.px]="width" [style.height.px]="height">
+    <ng-container *ngFor="let c of components">
+      <div class="block" [ngStyle]="toBoxStyle(c)">
+        <ng-container [ngSwitch]="c.name">
+          <div *ngSwitchCase="'Logo'" class="logo">amazon.com<br><small>Sender Address</small></div>
+
+          <div *ngSwitchCase="'ShipTo'" class="shipto">
+            <div class="chip">SHIP TO:</div>
+            <div class="addr" [innerText]="c.data?.address || '(shipping address)'"></div>
+          </div>
+
+          <div *ngSwitchCase="'QR'" class="qr">
+            <canvas appQrCode [value]="c.data?.value || 'QR123'" width="140" height="140"></canvas>
+          </div>
+
+          <div *ngSwitchCase="'BarcodeSmall'" class="barcode small">
+            <div class="code">{{ c.data?.value }}</div>
+            <svg appBarcode
+                 [value]="c.data?.value || '123654789'"
+                 [displayValue]="false"
+                 [barHeight]="90"
+                 [barWidth]="2"
+                 [margin]="0"
+                 preserveAspectRatio="none"
+                 class="barcode-svg"></svg>
+          </div>
+
+          <div *ngSwitchCase="'Tracking'" class="tracking">
+            <div>(Tracking Information)</div>
+            <div>{{ c.data?.line2 || 'Carrier Name' }}</div>
+            <div>{{ c.data?.line3 || 'Tracking #' }}</div>
+          </div>
+
+          <div *ngSwitchCase="'BarcodeLarge'" class="barcode large">
+            <svg appBarcode
+                 [value]="c.data?.value || '6009785922537712345678'"
+                 [displayValue]="false"
+                 [barHeight]="140"
+                 [barWidth]="2"
+                 [margin]="0"
+                 preserveAspectRatio="none"
+                 class="barcode-svg"></svg>
+            <div class="digits">{{ c.data?.value }}</div>
+          </div>
+
+          <div *ngSwitchCase="'Weight'" class="weight">
+            <div class="icon">▮</div>
+            <div class="label">Weight:</div>
+          </div>
+
+          <div *ngSwitchDefault class="generic">{{ c.name }}</div>
+        </ng-container>
+      </div>
+    </ng-container>
+  </div>
+</div>

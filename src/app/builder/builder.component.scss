@@ -1,30 +1,77 @@
-.topbar {
-  height: 56px;
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: sans-serif;
+}
+
+.header {
+  height: 60px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding-left: 20px;
   border-bottom: 1px solid #e0e0e0;
-  background: #fff;
 }
 
-.nav {
+.hamburger-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  color: #555;
+}
+
+.container {
   display: flex;
-  gap: 16px;
+  height: calc(100vh - 120px); 
+  gap: 20px;
+  padding: 20px;
 }
 
-.nav a {
-  color: #333;
-  text-decoration: none;
-  padding: 6px 10px;
-  border-radius: 6px;
+.side-menu {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.3s ease-in-out;
+  background-color: #f4f4f9;
+  border-right: 1px solid #e0e0e0;
+
+  &.open {
+    width: 250px;
+    padding: 20px;
+  }
 }
 
-.nav a.active, .nav a:hover {
-  background: #f0f0f5;
-}
+.menu-content {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 
-.content {
-  padding: 16px;
+  .menu-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 15px;
+    background-color: #fff;
+    border: 1px solid #dcdcdc;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
+
+    &:hover {
+      background-color: #f0f0f5;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    i {
+      font-size: 18px;
+      color: #555;
+    }
+
+    span {
+      font-weight: 500;
+      color: #333;
+    }
+  }
 }
 
 .palette {
@@ -77,19 +124,17 @@
 }
 
 .canvas {
+  position: relative;
   width: 100%;
   height: 100%;
   border: 1px dashed #999;
   background-color: #fff;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  justify-content: stretch;
-  gap: 10px;
-  padding: 10px;
+  display: block;
+  overflow: hidden;
 }
 
 .canvas-widget {
+  position: absolute;
   background-color: #a5d6a7;
   border: 1px solid #4caf50;
   display: flex;
@@ -97,10 +142,31 @@
   justify-content: center;
   font-weight: bold;
   color: #2e7d32;
-  transition: all 0.3s ease-in-out;
+  transition: box-shadow 0.2s ease-in-out;
   box-sizing: border-box;
-  flex: 1 1 auto;
 }
+
+.canvas-widget:focus, .canvas-widget:hover {
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.4);
+}
+
+.widget-title {
+  pointer-events: none;
+}
+
+.resize-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #4caf50;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.resize-handle.se { right: -6px; bottom: -6px; cursor: se-resize; }
+.resize-handle.sw { left: -6px; bottom: -6px; cursor: sw-resize; }
+.resize-handle.ne { right: -6px; top: -6px; cursor: ne-resize; }
+.resize-handle.nw { left: -6px; top: -6px; cursor: nw-resize; }
 
 .footer {
   display: flex;
