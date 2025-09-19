@@ -1,0 +1,31 @@
+<div class="templates-list">
+  <div class="header">
+    <h2>Saved Templates</h2>
+    <div class="meta" *ngIf="groups().length">{{ groups().length }} template(s)</div>
+  </div>
+
+  <div *ngIf="loading()" class="loading">Loading templates…</div>
+  <div *ngIf="error()" class="error">{{ error() }}</div>
+
+  <div class="grid">
+    <div class="card" *ngFor="let g of groups()">
+      <div class="card-head">
+        <div class="title">Template {{ g.templateId | slice:0:8 }}</div>
+        <div class="id">{{ g.templateId }}</div>
+      </div>
+      <div class="card-body">
+        <div class="preview-canvas">
+          <div class="preview-widget" *ngFor="let c of g.components" [ngStyle]="boxStyle(c)">
+            <span class="name">{{ c.name }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <button class="btn primary" (click)="useTemplate(g)">
+          <i class="fas fa-edit"></i>
+          Edit
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

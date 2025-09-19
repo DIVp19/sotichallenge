@@ -6,6 +6,9 @@ import { Router } from '@angular/router';
 import { TemplateService } from '../shared/template.service';
 import { TemplatePayload, ComponentRecord } from '../shared/label.models';
 import { ProductService, ProductDTO } from '../shared/product.service';
+import { BarcodeDirective } from '../shared/barcode.directive';
+import { QrCodeDirective } from '../shared/qrcode.directive';
+import Swal from 'sweetalert2';
 
 interface CanvasWidget {
   id: string;
@@ -28,13 +31,37 @@ type Corner = 'se' | 'sw' | 'ne' | 'nw';
   templateUrl: './builder.component.html',
   styleUrls: ['./builder.component.scss'],
   standalone: true,
-  imports: [CommonModule, DragDropModule]
+  imports: [CommonModule, DragDropModule, BarcodeDirective, QrCodeDirective]
 })
 export class BuilderComponent {
   @ViewChild('canvasEl') canvasEl!: ElementRef<HTMLDivElement>;
 
   private readonly snapStep = 2; 
   private readonly edgeThreshold = 1.0;
+  private readonly apiBase = 'http://localhost:5088';
+
+  private newTemplateId() {
+    try { return (crypto as any).randomUUID(); } catch { return 'tpl-' + Date.now(); }
+  }
+
+  // Helper to compute style for preview box in modal
+  toBoxStyle(c: ComponentRecord) {
+    const x = (pct: number) => (pct / 100) * this.width;
+    const y = (pct: number) => (pct / 100) * this.height;
+    const left = x(c.xLeftTop);
+    const top = y(c.yLeftTop);
+    const right = x(c.xRightTop);
+    const bottom = y(c.yLeftBottom);
+    const w = right - left;
+    const h = bottom - top;
+    return { left: left + 'px', top: top + 'px', width: w + 'px', height: h + 'px' } as any;
+  }
+
+  closePreview() {
+    this.isPreviewOpen = false;
+    this.previewPayload = null;
+  }
+  private templateId: string = this.newTemplateId();
 
   guideX: number | null = null;
   guideY: number | null = null;
@@ -51,12 +78,16 @@ export class BuilderComponent {
   canvasWidgets: CanvasWidget[] = [];
   isMenuOpen: boolean = false;
 
-  private width = 500;
-  private height = 800;
+  width = 500;
+  height = 800;
 
   private resizing: { widget: CanvasWidget; corner: Corner; startX: number; startY: number; startW: number; startH: number; startLeft: number; startTop: number } | null = null;
 
   private lastSafePx: Record<string, { left: number; top: number }> = {};
+
+  // Preview modal state
+  isPreviewOpen: boolean = false;
+  previewPayload: TemplatePayload | null = null;
 
   constructor(private cdr: ChangeDetectorRef, private templateService: TemplateService, private router: Router, private productService: ProductService) {}
 
@@ -86,6 +117,33 @@ export class BuilderComponent {
         }
       }
     }
+  }
+
+  private buildComponentsFromCanvas(): ComponentRecord[] {
+    return this.canvasWidgets.map((w, idx) => ({
+      templateId: this.templateId,
+      componentId: w.id || `C-${idx + 1}`,
+      name: w.name,
+      xLeftTop: w.x,
+      yLeftTop: w.y,
+      xRightTop: w.x + w.w,
+      yRightTop: w.y,
+      xLeftBottom: w.x,
+      yLeftBottom: w.y + w.h,
+      xRightBottom: w.x + w.w,
+      yRightBottom: w.y + w.h,
+      data: this.componentDataFor(w.name)
+    }));
+  }
+
+  private persistCurrentTemplate() {
+    const payload: TemplatePayload = {
+      template: { id: this.templateId, name: 'User Template' },
+      width: this.width,
+      height: this.height,
+      components: this.buildComponentsFromCanvas()
+    };
+    this.templateService.setTemplate(payload);
   }
 
   private applyEdgeSnap(leftPct: number, topPct: number, boxW: number, boxH: number, ignoreId?: string) {
@@ -197,6 +255,8 @@ export class BuilderComponent {
     this.resolveCollisions(newWidget);
 
     this.cdr.detectChanges();
+    // Persist coordinates after placing the widget
+    this.persistCurrentTemplate();
   }
 
   onDragEnd(event: any, widget: CanvasWidget) {
@@ -220,6 +280,8 @@ export class BuilderComponent {
     this.resolveCollisions(widget);
 
     this.guideX = null; this.guideY = null;
+    // Persist coordinates after drag end
+    this.persistCurrentTemplate();
   }
 
   onResizeMouseDown(e: MouseEvent, widget: CanvasWidget, corner: Corner) {
@@ -270,54 +332,81 @@ export class BuilderComponent {
     window.removeEventListener('mouseup', onUp as any);
     this.guideX = null; this.guideY = null;
     this.resizing = null;
+    // Persist coordinates after resize end
+    this.persistCurrentTemplate();
   }
 
   resetCanvas() {
     this.canvasWidgets = [];
+    this.templateId = this.newTemplateId();
     this.templateService.clear();
   }
 
-  saveTemplate() {
-    const components: ComponentRecord[] = this.canvasWidgets.map((w, idx) => ({
-      templateId: 'T-USER',
-      componentId: `C-${idx + 1}`,
-      name: w.name,
-      xLeftTop: w.x,
-      yLeftTop: w.y,
-      xRightTop: w.x + w.w,
-      yRightTop: w.y,
-      xLeftBottom: w.x,
-      yLeftBottom: w.y + w.h,
-      xRightBottom: w.x + w.w,
-      yRightBottom: w.y + w.h,
-      data: this.componentDataFor(w.name)
-    }));
-
+  previewTemplate() {
     const payload: TemplatePayload = {
-      template: { id: 'T-USER', name: 'User Template' },
+      template: { id: this.templateId, name: 'User Template' },
+      width: this.width,
+      height: this.height,
+      components: this.buildComponentsFromCanvas()
+    };
+    this.templateService.setTemplate(payload);
+    this.previewPayload = payload;
+    this.isPreviewOpen = true;
+  }
+
+  async saveTemplate() {
+    // Log coordinates to console for inspection
+    const components = this.buildComponentsFromCanvas();
+    console.log('[Builder] Saving template components (corner coordinates as %):', components);
+    console.log('[Builder] Canvas size (for scaling reference):', { width: this.width, height: this.height });
+
+    // Build payload for API
+    const payload: TemplatePayload = {
+      template: { id: this.templateId, name: 'User Template' },
       width: this.width,
       height: this.height,
       components
     };
 
-    this.templateService.setTemplate(payload);
-    this.router.navigate(['/admin']);
+    // POST to API
+    try {
+      const res = await fetch(`${this.apiBase}/api/templates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        console.error('[Builder] API save failed', res.status, text);
+        await Swal.fire({ icon: 'error', title: 'Save failed', text: text || `HTTP ${res.status}` });
+      } else {
+        const json = await res.json();
+        console.log('[Builder] API save success:', json);
+        await Swal.fire({ icon: 'success', title: 'Template saved', text: `Saved ${json?.count ?? components.length} component(s).` });
+        this.closePreview();
+        this.resetCanvas();
+      }
+    } catch (err) {
+      console.error('[Builder] API save error:', err);
+      await Swal.fire({ icon: 'error', title: 'Save error', text: (err as any)?.message ?? 'Unknown error' });
+    }
   }
 
   generateFromProduct() {
     this.productService.getProduct().subscribe((p: ProductDTO) => {
+      this.templateId = this.newTemplateId();
       const components: ComponentRecord[] = [
-        { templateId: 'T-DATA', componentId: 'C-LOGO', name: 'Logo', xLeftTop: 0, yLeftTop: 0, xRightTop: 35, yRightTop: 0, xLeftBottom: 0, yLeftBottom: 12, xRightBottom: 35, yRightBottom: 12, data: { text: 'amazon.com' } },
-        { templateId: 'T-DATA', componentId: 'C-SHIPTO', name: 'ShipTo', xLeftTop: 35, yLeftTop: 0, xRightTop: 100, yRightTop: 0, xLeftBottom: 35, yLeftBottom: 20, xRightBottom: 100, yRightBottom: 20, data: { title: 'SHIP TO:', address: p.recipientAddress } },
-        { templateId: 'T-DATA', componentId: 'C-QR', name: 'QR', xLeftTop: 0, yLeftTop: 20, xRightTop: 30, yRightTop: 20, xLeftBottom: 0, yLeftBottom: 45, xRightBottom: 30, yRightBottom: 45, data: { value: p.qrValue } },
-        { templateId: 'T-DATA', componentId: 'C-CODE-TOP', name: 'BarcodeSmall', xLeftTop: 30, yLeftTop: 20, xRightTop: 100, yRightTop: 20, xLeftBottom: 30, yLeftBottom: 45, xRightBottom: 100, yRightBottom: 45, data: { value: p.trackingNumber } },
-        { templateId: 'T-DATA', componentId: 'C-TRACK', name: 'Tracking', xLeftTop: 0, yLeftTop: 45, xRightTop: 100, yRightTop: 45, xLeftBottom: 0, yLeftBottom: 60, xRightBottom: 100, yRightBottom: 60, data: { line1: '(Tracking Information)', line2: p.carrierName, line3: p.trackingNumber } },
-        { templateId: 'T-DATA', componentId: 'C-BARCODE', name: 'BarcodeLarge', xLeftTop: 0, yLeftTop: 60, xRightTop: 100, yRightTop: 60, xLeftBottom: 0, yLeftBottom: 85, xRightBottom: 100, yRightBottom: 85, data: { value: p.barcodeValue } },
-        { templateId: 'T-DATA', componentId: 'C-WEIGHT', name: 'Weight', xLeftTop: 0, yLeftTop: 85, xRightTop: 100, yRightTop: 85, xLeftBottom: 0, yLeftBottom: 100, xRightBottom: 100, yRightBottom: 100, data: { label: `Weight: ${p.weight}` } }
+        { templateId: this.templateId, componentId: 'C-LOGO', name: 'Logo', xLeftTop: 0, yLeftTop: 0, xRightTop: 35, yRightTop: 0, xLeftBottom: 0, yLeftBottom: 12, xRightBottom: 35, yRightBottom: 12, data: { text: 'amazon.com' } },
+        { templateId: this.templateId, componentId: 'C-SHIPTO', name: 'ShipTo', xLeftTop: 35, yLeftTop: 0, xRightTop: 100, yRightTop: 0, xLeftBottom: 35, yLeftBottom: 20, xRightBottom: 100, yRightBottom: 20, data: { title: 'SHIP TO:', address: p.recipientAddress } },
+        { templateId: this.templateId, componentId: 'C-QR', name: 'QR', xLeftTop: 0, yLeftTop: 20, xRightTop: 30, yRightTop: 20, xLeftBottom: 0, yLeftBottom: 45, xRightBottom: 30, yRightBottom: 45, data: { value: p.qrValue } },
+        { templateId: this.templateId, componentId: 'C-CODE-TOP', name: 'BarcodeSmall', xLeftTop: 30, yLeftTop: 20, xRightTop: 100, yRightTop: 20, xLeftBottom: 30, yLeftBottom: 45, xRightBottom: 100, yRightBottom: 45, data: { value: p.trackingNumber } },
+        { templateId: this.templateId, componentId: 'C-TRACK', name: 'Tracking', xLeftTop: 0, yLeftTop: 45, xRightTop: 100, yRightTop: 45, xLeftBottom: 0, yLeftBottom: 60, xRightBottom: 100, yRightBottom: 60, data: { line1: '(Tracking Information)', line2: p.carrierName, line3: p.trackingNumber } },
+        { templateId: this.templateId, componentId: 'C-BARCODE', name: 'BarcodeLarge', xLeftTop: 0, yLeftTop: 60, xRightTop: 100, yRightTop: 60, xLeftBottom: 0, yLeftBottom: 85, xRightBottom: 100, yRightBottom: 85, data: { value: p.barcodeValue } },
+        { templateId: this.templateId, componentId: 'C-WEIGHT', name: 'Weight', xLeftTop: 0, yLeftTop: 85, xRightTop: 100, yRightTop: 85, xLeftBottom: 0, yLeftBottom: 100, xRightBottom: 100, yRightBottom: 100, data: { label: `Weight: ${p.weight}` } }
       ];
 
       const payload: TemplatePayload = {
-        template: { id: 'T-DATA', name: 'Data-driven Label' },
+        template: { id: this.templateId, name: 'Data-driven Label' },
         width: this.width,
         height: this.height,
         components

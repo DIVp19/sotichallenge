@@ -1,62 +1,162 @@
 <div class="admin-page">
-  <div class="toolbar no-print">
-    <h2>{{ template.name }}</h2>
-    <button class="print-btn" (click)="onPrint()">Print / Save as PDF</button>
-  </div>
-
-  <div class="label-canvas" [style.width.px]="width" [style.height.px]="height">
-    <ng-container *ngFor="let c of components">
-      <div class="block" [ngStyle]="toBoxStyle(c)">
-        <ng-container [ngSwitch]="c.name">
-          <div *ngSwitchCase="'Logo'" class="logo">amazon.com<br><small>Sender Address</small></div>
-
-          <div *ngSwitchCase="'ShipTo'" class="shipto">
-            <div class="chip">SHIP TO:</div>
-            <div class="addr" [innerText]="c.data?.address || '(shipping address)'"></div>
+  <!-- List View -->
+  <ng-container *ngIf="viewingList(); else editorTpl">
+    <div class="toolbar no-print">
+      <h2>Saved Templates</h2>
+    </div>
+    <div *ngIf="loading()" class="loading">Loading templates…</div>
+    <div *ngIf="error()" class="error">{{ error() }}</div>
+    <div class="grid">
+      <div class="card" *ngFor="let g of groups()">
+        <div class="card-head">
+          <div class="title">Template {{ g.templateId | slice:0:8 }}</div>
+          <div class="id">{{ g.templateId }}</div>
+        </div>
+        <div class="card-body">
+          <div class="preview-canvas">
+            <div class="preview-widget" *ngFor="let c of g.components" [ngStyle]="{left: (c.xLeftTop)+'%', top: (c.yLeftTop)+'%', width: (c.xRightTop - c.xLeftTop)+'%', height: (c.yLeftBottom - c.yLeftTop)+'%'}">
+              <span class="name">{{ c.name }}</span>
+            </div>
           </div>
+        </div>
+        <div class="card-foot">
+          <button class="btn primary" (click)="useTemplate(g)">Edit</button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
 
-          <div *ngSwitchCase="'QR'" class="qr">
-            <canvas appQrCode [value]="c.data?.value || 'QR123'" width="140" height="140"></canvas>
+  <!-- Editor View -->
+  <ng-template #editorTpl>
+    <div class="toolbar no-print">
+      <h2 contenteditable="true" (input)="renameTemplate($any($event.target).innerText)">{{ template.name }}</h2>
+      <div class="actions">
+        <button class="print-btn" (click)="onPrint()">Print / Save as PDF</button>
+        <button class="print-btn" (click)="backToList()">Back to List</button>
+      </div>
+    </div>
+    <div class="workspace">
+      <div class="label-canvas" [style.width.px]="width" [style.height.px]="height">
+        <ng-container *ngFor="let c of components">
+          <div class="block" [ngClass]="{selected: selected===c}" (click)="select(c)" [ngStyle]="toBoxStyle(c)">
+            <ng-container [ngSwitch]="c.name">
+            <div *ngSwitchCase="'Logo'" class="logo">{{ c.data?.title || 'amazon.com' }}<br><small>{{ c.data?.subtitle || 'Sender Address' }}</small></div>
+
+            <div *ngSwitchCase="'ShipTo'" class="shipto">
+              <div class="chip">SHIP TO:</div>
+              <div class="addr" [innerText]="c.data?.address || '(shipping address)'"></div>
+            </div>
+
+            <div *ngSwitchCase="'QR'" class="qr">
+              <canvas appQrCode [value]="c.data?.value || 'QR123'" width="140" height="140"></canvas>
+            </div>
+
+            <div *ngSwitchCase="'BarcodeSmall'" class="barcode small">
+              <div class="code">{{ c.data?.value }}</div>
+              <svg appBarcode
+                   [value]="c.data?.value || '123654789'"
+                   [displayValue]="false"
+                   [barHeight]="computeBarHeight(c)"
+                   [barWidth]="2"
+                   [margin]="0"
+                   preserveAspectRatio="none"
+                   class="barcode-svg"></svg>
+            </div>
+
+            <div *ngSwitchCase="'Tracking'" class="tracking">
+              <div>(Tracking Information)</div>
+              <div>{{ c.data?.line2 || 'Carrier Name' }}</div>
+              <div>{{ c.data?.line3 || 'Tracking #' }}</div>
+            </div>
+
+            <div *ngSwitchCase="'BarcodeLarge'" class="barcode large">
+              <svg appBarcode
+                   [value]="c.data?.value || 'xxxxxxxxxxxxxxxxxxxx'"
+                   [displayValue]="false"
+                   [barHeight]="computeBarHeight(c)"
+                   [barWidth]="2"
+                   [margin]="0"
+                   preserveAspectRatio="none"
+                   class="barcode-svg"></svg>
+              <div class="digits">{{ c.data?.value }}</div>
+            </div>
+
+            <div *ngSwitchCase="'Weight'" class="weight">
+              <div class="icon">▮</div>
+              <div class="label">Weight:</div>
+            </div>
+
+            <div *ngSwitchCase="'Text'" class="generic">{{ c.data?.text || 'Text' }}</div>
+
+            <div *ngSwitchDefault class="generic">{{ c.name }}</div>
+            </ng-container>
           </div>
-
-          <div *ngSwitchCase="'BarcodeSmall'" class="barcode small">
-            <div class="code">{{ c.data?.value }}</div>
-            <svg appBarcode
-                 [value]="c.data?.value || '123654789'"
-                 [displayValue]="false"
-                 [barHeight]="90"
-                 [barWidth]="2"
-                 [margin]="0"
-                 preserveAspectRatio="none"
-                 class="barcode-svg"></svg>
-          </div>
-
-          <div *ngSwitchCase="'Tracking'" class="tracking">
-            <div>(Tracking Information)</div>
-            <div>{{ c.data?.line2 || 'Carrier Name' }}</div>
-            <div>{{ c.data?.line3 || 'Tracking #' }}</div>
-          </div>
-
-          <div *ngSwitchCase="'BarcodeLarge'" class="barcode large">
-            <svg appBarcode
-                 [value]="c.data?.value || '6009785922537712345678'"
-                 [displayValue]="false"
-                 [barHeight]="140"
-                 [barWidth]="2"
-                 [margin]="0"
-                 preserveAspectRatio="none"
-                 class="barcode-svg"></svg>
-            <div class="digits">{{ c.data?.value }}</div>
-          </div>
-
-          <div *ngSwitchCase="'Weight'" class="weight">
-            <div class="icon">▮</div>
-            <div class="label">Weight:</div>
-          </div>
-
-          <div *ngSwitchDefault class="generic">{{ c.name }}</div>
         </ng-container>
       </div>
-    </ng-container>
-  </div>
+
+      <aside class="editor no-print">
+        <div class="panel-title">Edit Component</div>
+        <div *ngIf="!selected" class="hint">Select a block on the label to edit its data.</div>
+        <div *ngIf="selected as s">
+          <div class="row"><label>Type</label><div>{{ s.name }}</div></div>
+          <div class="row"><label>Component ID</label><div>{{ s.componentId }}</div></div>
+          <div class="row"><label>Template ID</label><div>{{ s.templateId }}</div></div>
+
+          <ng-container [ngSwitch]="s.name">
+            <div *ngSwitchCase="'Logo'">
+              <div class="row">
+                <label>Title</label>
+                <input [value]="$any(s.data)?.title || ''" (input)="setField(s, 'title', $any($event.target).value)" />
+              </div>
+              <div class="row">
+                <label>Subtitle</label>
+                <input [value]="$any(s.data)?.subtitle || ''" (input)="setField(s, 'subtitle', $any($event.target).value)" />
+              </div>
+            </div>
+
+            <div *ngSwitchCase="'ShipTo'" class="row">
+              <label>Address</label>
+              <textarea [value]="$any(s.data)?.address || ''" (input)="setField(s, 'address', $any($event.target).value)"></textarea>
+            </div>
+
+            <div *ngSwitchCase="'QR'" class="row">
+              <label>QR Value</label>
+              <input [value]="$any(s.data)?.value || ''" (input)="setField(s, 'value', $any($event.target).value)" />
+            </div>
+
+            <div *ngSwitchCase="'BarcodeSmall'" class="row">
+              <label>Barcode Value</label>
+              <input [value]="$any(s.data)?.value || ''" (input)="setField(s, 'value', $any($event.target).value)" />
+            </div>
+
+            <div *ngSwitchCase="'BarcodeLarge'" class="row">
+              <label>Barcode Value</label>
+              <input [value]="$any(s.data)?.value || ''" (input)="setField(s, 'value', $any($event.target).value)" />
+            </div>
+
+            <div *ngSwitchCase="'Tracking'">
+              <div class="row">
+                <label>Carrier</label>
+                <input [value]="$any(s.data)?.line2 || ''" (input)="setField(s, 'line2', $any($event.target).value)" />
+              </div>
+              <div class="row">
+                <label>Tracking #</label>
+                <input [value]="$any(s.data)?.line3 || ''" (input)="setField(s, 'line3', $any($event.target).value)" />
+              </div>
+            </div>
+
+            <div *ngSwitchCase="'Weight'" class="row">
+              <label>Label</label>
+              <input [value]="$any(s.data)?.label || ''" (input)="setField(s, 'label', $any($event.target).value)" />
+            </div>
+
+            <div *ngSwitchDefault class="row">
+              <label>Text</label>
+              <input [value]="$any(s.data)?.text || ''" (input)="setField(s, 'text', $any($event.target).value)" />
+            </div>
+          </ng-container>
+        </div>
+      </aside>
+    </div>
+  </ng-template>
 </div>

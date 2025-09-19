@@ -18,9 +18,9 @@
         <i class="fas fa-plus"></i>
         <span>New empty canvas</span>
       </button>
-      <button class="menu-button" (click)="saveTemplate()">
-        <i class="fas fa-save"></i>
-        <span>Save & Preview</span>
+      <button class="menu-button" (click)="previewTemplate()">
+        <i class="fas fa-eye"></i>
+        <span>Preview</span>
       </button>
     </div>
   </div>
@@ -57,6 +57,78 @@
 </div>
 
 <div class="footer" *ngIf="canvasWidgets.length > 0">
-  <button (click)="saveTemplate()">Save Template</button>
+  <button (click)="previewTemplate()">Preview</button>
   <button (click)="resetCanvas()">Cancel Process</button>
+</div>
+
+<!-- Preview Modal -->
+<div class="preview-overlay" *ngIf="isPreviewOpen">
+  <div class="preview-modal">
+    <div class="modal-head">
+      <div class="title">Template Preview</div>
+      <button class="close" (click)="closePreview()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="label-canvas" [style.width.px]="width" [style.height.px]="height">
+        <ng-container *ngFor="let c of previewPayload?.components || []">
+          <div class="block" [ngStyle]="toBoxStyle(c)">
+            <ng-container [ngSwitch]="c.name">
+              <div *ngSwitchCase="'Logo'" class="logo">amazon.com<br><small>Sender Address</small></div>
+
+              <div *ngSwitchCase="'ShipTo'" class="shipto">
+                <div class="chip">SHIP TO:</div>
+                <div class="addr" [innerText]="c.data?.address || '(shipping address)'"></div>
+              </div>
+
+              <div *ngSwitchCase="'QR'" class="qr">
+                <canvas appQrCode [value]="c.data?.value || 'QR123'" width="140" height="140"></canvas>
+              </div>
+
+              <div *ngSwitchCase="'BarcodeSmall'" class="barcode small">
+                <div class="code">{{ c.data?.value }}</div>
+                <svg appBarcode
+                     [value]="c.data?.value || '123654789'"
+                     [displayValue]="false"
+                     [barHeight]="90"
+                     [barWidth]="2"
+                     [margin]="0"
+                     preserveAspectRatio="none"
+                     class="barcode-svg"></svg>
+              </div>
+
+              <div *ngSwitchCase="'Tracking'" class="tracking">
+                <div>(Tracking Information)</div>
+                <div>{{ c.data?.line2 || 'Carrier Name' }}</div>
+                <div>{{ c.data?.line3 || 'Tracking #' }}</div>
+              </div>
+
+              <div *ngSwitchCase="'BarcodeLarge'" class="barcode large">
+                <svg appBarcode
+                     [value]="c.data?.value || 'xxxxxxxxxxxxxxxxxxxx'"
+                     [displayValue]="false"
+                     [barHeight]="140"
+                     [barWidth]="2"
+                     [margin]="0"
+                     preserveAspectRatio="none"
+                     class="barcode-svg"></svg>
+                <div class="digits">{{ c.data?.value }}</div>
+              </div>
+
+              <div *ngSwitchCase="'Weight'" class="weight">
+                <div class="icon">▮</div>
+                <div class="label">Weight:</div>
+              </div>
+
+              <div *ngSwitchDefault class="generic">{{ c.name }}</div>
+            </ng-container>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="save" (click)="saveTemplate()">Save</button>
+      <button class="close-btn" (click)="closePreview()">Close</button>
+    </div>
+  </div>
+  <div class="backdrop" (click)="closePreview()"></div>
 </div>

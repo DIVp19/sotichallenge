@@ -21,7 +21,7 @@ export class ProductService {
       carrierName: 'Carrier Name',
       trackingNumber: '1Z999AA10123456784',
       weight: '2.5 kg',
-      barcodeValue: '6009785922537712345678',
+      barcodeValue: 'xxxxxxxxxxxxxxxxxxx',
       qrValue: 'https://tracking.example.com/1Z999AA10123456784'
     });
   }

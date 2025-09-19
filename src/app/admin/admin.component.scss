@@ -17,6 +17,12 @@
   cursor: pointer;
 }
 
+.workspace {
+  display: grid;
+  grid-template-columns: auto 320px;
+  gap: 16px;
+}
+
 .label-canvas {
   position: relative;
   border: 1px solid #ccc;
@@ -33,6 +39,11 @@
   align-items: center;
   justify-content: center;
   background: #fafafa;
+}
+
+.block.selected {
+  outline: 2px solid #2563eb;
+  background: #eef2ff;
 }
 
 .logo {
@@ -81,6 +92,48 @@
 
 .weight { display: flex; align-items: center; gap: 8px; }
 .weight .icon { background: #f39c12; color: #fff; padding: 4px 8px; border-radius: 3px; }
+
+.editor {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.editor .panel-title { font-weight: 600; margin-bottom: 8px; }
+.editor .hint { color: #666; font-size: 13px; }
+.editor .row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.editor label { font-size: 12px; color: #555; }
+.editor input, .editor textarea {
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.editor textarea { min-height: 80px; resize: vertical; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); display: flex; flex-direction: column; }
+.card-head { padding: 12px 14px; border-bottom: 1px solid #eee; }
+.card-head .title { font-weight: 600; }
+.card-head .id { font-size: 12px; color: #777; margin-top: 2px; word-break: break-all; }
+.card-body { padding: 12px; display: flex; justify-content: center; }
+.card-foot { padding: 10px 12px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; }
+.btn { appearance: none; border: 1px solid #d1d5db; padding: 6px 10px; border-radius: 6px; background: #fff; cursor: pointer; }
+.btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+.btn.primary:hover { background: #1d4ed8; }
+
+.preview-canvas { position: relative; width: 280px; height: 448px; border: 1px dashed #d1d5db; background: linear-gradient(180deg, #fafafa, #f7f7f7); border-radius: 8px; }
+.preview-widget { position: absolute; border: 1px solid #60a5fa; background: rgba(59,130,246,0.08); color: #1d4ed8; font-size: 10px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+.preview-widget .name { padding: 2px 4px; }
+
+.loading { padding: 12px 0; color: #555; }
+.error { padding: 10px 12px; background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; border-radius: 6px; }
 
 /* Print styles */
 @media print {
