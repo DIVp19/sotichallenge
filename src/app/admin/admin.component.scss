@@ -137,8 +137,16 @@
 
 /* Print styles */
 @media print {
-  .no-print { display: none !important; }
+  /* Show only the label area */
+  body * { visibility: hidden !important; }
+  .label-canvas, .label-canvas * { visibility: visible !important; }
+
+  /* Place the label at page origin */
+  .label-canvas { box-shadow: none; border: 1px solid #000; position: absolute; left: 0; top: 0; margin: 0; }
+
+  /* Exact label paper size: 4x6 inches, small margin for slight inset */
+  @page { size: 4in 6in; margin: 2mm; }
+
+  /* Ensure colors render as authored */
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  @page { size: A4 portrait; margin: 10mm; }
-  .label-canvas { box-shadow: none; border: 1px solid #000; }
 }
